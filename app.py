@@ -14,11 +14,6 @@ class App:
         self.ui = UIHelper()
         self.api_manager = APIKeyManager()
         self.yfinance_provider = YFinanceProvider()
-        self.fmp_provider = FMPProvider(self.api_manager.get_fmp_api_key())
-        self.news_provider = NewsProvider(self.api_manager.get_news_api_key())
-        self.portfolio = Portfolio(self.yfinance_provider, self.fmp_provider)
-        self.stock_analyzer = StockAnalyzer(self.yfinance_provider, self.fmp_provider)
-        self.sentiment_analyzer = SentimentAnalyzer(self.news_provider)
         self.risk_profiler = RiskProfiler()
 
     def run(self):
@@ -33,45 +28,55 @@ class App:
         
         selected_menu, uploaded_file = self.ui.display_sidebar(self.api_manager)
         
+        fmp_api_key = self.api_manager.get_fmp_api_key()
+        news_api_key = self.api_manager.get_news_api_key()
+
+        fmp_provider = FMPProvider(fmp_api_key)
+        news_provider = NewsProvider(news_api_key)
+        
+        portfolio = Portfolio(self.yfinance_provider, fmp_provider)
+        stock_analyzer = StockAnalyzer(self.yfinance_provider, fmp_provider)
+        sentiment_analyzer = SentimentAnalyzer(news_provider)
+
         if uploaded_file:
-            self.portfolio.load_from_file(uploaded_file)
+            portfolio.load_from_file(uploaded_file)
 
         st.title("Stock Analysis Toolkit Pro+")
 
         if selected_menu == "Dashboard Portfolio" or selected_menu == "Analisis DCA":
-            if not self.portfolio.df.empty:
-                self.portfolio.get_dca_analysis()
+            if not portfolio.df.empty:
+                portfolio.get_dca_analysis()
             else:
                 st.info("Silakan upload file portfolio untuk melihat dashboard")
         
         elif selected_menu == "Prediksi Harga Saham":
-            if not self.portfolio.df.empty:
-                selected_ticker = st.selectbox("Pilih Saham", self.portfolio.df['Ticker'].tolist())
-                self.stock_analyzer.get_prediction(selected_ticker)
+            if not portfolio.df.empty:
+                selected_ticker = st.selectbox("Pilih Saham", portfolio.df['Ticker'].tolist())
+                stock_analyzer.get_prediction(selected_ticker)
             else:
                 st.warning("Silakan upload file portfolio terlebih dahulu")
 
         elif selected_menu == "Valuasi Saham":
-            if not self.portfolio.df.empty and self.fmp_provider.api_key:
-                selected_ticker = st.selectbox("Pilih Saham", self.portfolio.df['Ticker'].tolist())
+            if not portfolio.df.empty and fmp_api_key:
+                selected_ticker = st.selectbox("Pilih Saham", portfolio.df['Ticker'].tolist())
                 clean_ticker = selected_ticker.replace('.JK', '')
-                self.stock_analyzer.get_valuation(clean_ticker)
-            elif not self.fmp_provider.api_key:
+                stock_analyzer.get_valuation(clean_ticker)
+            elif not fmp_api_key:
                 st.warning("Silakan masukkan API Key FMP di sidebar")
             else:
                 st.warning("Silakan upload file portfolio terlebih dahulu")
         
         elif selected_menu == "Market News & Sentiment":
-            self.sentiment_analyzer.display_news_feed()
+            sentiment_analyzer.display_news_feed()
 
         elif selected_menu == "Tracking Modal":
-            self.portfolio.capital_tracking()
+            portfolio.capital_tracking()
 
         elif selected_menu == "Rekomendasi Pembelian":
-            if not self.portfolio.df.empty and self.fmp_provider.api_key:
-                self.portfolio.update_realtime_data()
-                self.stock_analyzer.investment_simulation(self.portfolio.df)
-            elif not self.fmp_provider.api_key:
+            if not portfolio.df.empty and fmp_api_key:
+                portfolio.update_realtime_data()
+                stock_analyzer.investment_simulation(portfolio.df)
+            elif not fmp_api_key:
                 st.warning("Silakan masukkan API Key FMP di sidebar")
             else:
                 st.warning("Silakan upload file portfolio terlebih dahulu")
@@ -86,7 +91,7 @@ class App:
             ])
             
             with tab1:
-                self.stock_analyzer.get_undervalued_recommendations()
+                stock_analyzer.get_undervalued_recommendations()
 
             with tab2:
                 st.subheader("Rekomendasi Diversifikasi Portofolio")
@@ -94,21 +99,21 @@ class App:
                 
                 risk_profile = self.risk_profiler.get_user_profile()
                 
-                if risk_profile and not self.portfolio.df.empty:
-                    self.portfolio.update_realtime_data()
-                    self.risk_profiler.get_diversification_recommendation(self.portfolio.df, risk_profile)
+                if risk_profile and not portfolio.df.empty:
+                    portfolio.update_realtime_data()
+                    self.risk_profiler.get_diversification_recommendation(portfolio.df, risk_profile)
             
             with tab3:
                 st.subheader("Analisis Risiko Portofolio")
                 st.info("Skor risiko portofolio Anda berdasarkan karakteristik saham:")
                 
-                if not self.portfolio.df.empty and self.fmp_provider.api_key:
-                    self.portfolio.update_realtime_data()
-                    self.risk_profiler.calculate_portfolio_risk_score(self.portfolio.df, self.fmp_provider)
+                if not portfolio.df.empty and fmp_api_key:
+                    portfolio.update_realtime_data()
+                    self.risk_profiler.calculate_portfolio_risk_score(portfolio.df, fmp_provider)
 
         elif selected_menu == "Komparasi Saham":
-            if self.fmp_provider.api_key:
-                self.stock_analyzer.stock_comparison(self.portfolio.df)
+            if fmp_api_key:
+                stock_analyzer.stock_comparison(portfolio.df)
             else:
                 st.warning("Silakan masukkan API Key FMP di sidebar")
 
