@@ -184,18 +184,23 @@ class UIHelper:
     def display_sidebar(self, api_manager):
         st.sidebar.title("📋 Menu Analisis")
         st.sidebar.header("Konfigurasi API")
-        api_key = api_manager.get_fmp_api_key()
-        news_api_key = api_manager.get_news_api_key()
+
+        if not api_manager.get_fmp_api_key():
+            fmp_api_key = st.sidebar.text_input("Masukkan API Key FMP", type="password", key="fmp_api_key_input_ui")
+            if st.sidebar.button("Simpan API Key FMP", key="save_fmp_api_key_ui"):
+                api_manager.set_fmp_api_key(fmp_api_key)
+                st.success("API Key FMP disimpan!")
+                st.rerun()
+
+        if not api_manager.get_news_api_key():
+            news_api_key = st.sidebar.text_input("Masukkan NewsAPI Key", type="password", key="news_api_key_input_ui")
+            if st.sidebar.button("Simpan NewsAPI Key", key="save_news_api_key_ui"):
+                api_manager.set_news_api_key(news_api_key)
+                st.success("NewsAPI Key disimpan!")
+                st.rerun()
 
         st.sidebar.header("Portfolio")
         uploaded_file = st.sidebar.file_uploader("Upload Portfolio", type=["csv", "xlsx"])
-
-        # portfolio_df = pd.DataFrame()
-        # if uploaded_file:
-        #     portfolio_df = process_uploaded_file(uploaded_file)
-        #     if not portfolio_df.empty:
-        #         st.sidebar.success("File portfolio berhasil diupload!")
-        #         st.sidebar.dataframe(portfolio_df[['Stock', 'Ticker']])
         
         menu_options = [
             "Dashboard Portfolio",
