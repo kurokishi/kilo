@@ -1,0 +1,17 @@
+streamlit
+pandas
+numpy==1.26.4
+yfinance
+plotly
+requests
+beautifulsoup4
+matplotlib
+tensorflow
+scikit-learn
+Prophet 
+textblob
+vaderSentiment
+feedparser
+requests
+statsmodels
+pmdarima
